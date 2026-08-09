@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Klipin — AI Video Clip Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #15110d;
+    --bg-panel: #1e1811;
+    --bg-panel-2: #241d15;
+    --text: #ece4d4;
+    --text-dim: #a9997f;
+    --amber: #e8963a;
+    --amber-dim: #8a5a22;
+    --teal: #2f6f68;
+    --teal-dim: #1c433f;
+    --border: #3a3025;
+    --radius: 6px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at top left, rgba(232,150,58,0.06), transparent 40%),
+      radial-gradient(ellipse at bottom right, rgba(47,111,104,0.08), transparent 45%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  ::selection{background:var(--amber);color:#15110d;}
+
+  /* ---------- topbar ---------- */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 28px;border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  }
+  .brand{display:flex;align-items:baseline;gap:10px;}
+  .brand h1{
+    font-family:'Bebas Neue',sans-serif;
+    font-size:28px;letter-spacing:1.5px;margin:0;color:var(--text);
+  }
+  .brand h1 span{color:var(--amber);}
+  .brand .tag{font-size:12px;color:var(--text-dim);letter-spacing:0.5px;}
+  .badge-proto{
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--teal);
+    border:1px solid var(--teal-dim);padding:4px 9px;border-radius:100px;
+    background:rgba(47,111,104,0.12);
+  }
+
+  /* ---------- hero / upload ---------- */
+  .hero{max-width:920px;margin:0 auto;padding:56px 24px 24px;text-align:center;}
+  .hero h2{
+    font-family:'Bebas Neue',sans-serif;font-size:46px;letter-spacing:1px;
+    margin:0 0 10px;line-height:1.05;
+  }
+  .hero h2 em{font-style:normal;color:var(--amber);}
+  .hero p.sub{color:var(--text-dim);font-size:15px;max-width:560px;margin:0 auto 34px;line-height:1.6;}
+
+  .dropzone{
+    border:2px dashed var(--border);border-radius:14px;
+    padding:48px 24px;background:var(--bg-panel);
+    display:flex;flex-direction:column;align-items:center;gap:12px;
+    cursor:pointer;transition:border-color .15s ease, background .15s ease;
+    position:relative;overflow:hidden;
+  }
+  .dropzone input[type=file]{
+    position:absolute;inset:0;width:100%;height:100%;
+    opacity:0;cursor:pointer;-webkit-appearance:none;
+  }
+  .dropzone:hover, .dropzone.drag{border-color:var(--amber);background:var(--bg-panel-2);}
+  .dropzone .reel{
+    width:56px;height:56px;border-radius:50%;border:3px solid var(--amber);
+    display:flex;align-items:center;justify-content:center;position:relative;
+  }
+  .dropzone .reel::before{
+    content:"";position:absolute;inset:14px;border-radius:50%;border:2px solid var(--amber-dim);
+  }
+  .dropzone .reel::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--amber);}
+  .dropzone .label{font-size:14px;color:var(--text);font-weight:600;}
+  .dropzone .hint{font-size:12.5px;color:var(--text-dim);}
+
+  input[type=text], input[type=number], textarea{
+    background:#100d09;border:1px solid var(--border);color:var(--text);
+    border-radius:var(--radius);padding:10px 12px;font-family:'Inter',sans-serif;font-size:13.5px;
+    width:100%;outline:none;
+  }
+  input[type=text]:focus, input[type=number]:focus, textarea:focus{border-color:var(--amber);}
+  .btn{
+    font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;
+    background:var(--amber);color:#1a1208;border:none;border-radius:var(--radius);
+    padding:10px 18px;cursor:pointer;transition:filter .15s ease, transform .1s ease;white-space:nowrap;
+  }
+  .btn:hover{filter:brightness(1.08);}
+  .btn:active{transform:scale(0.98);}
+  .btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text);}
+  .btn.ghost:hover{border-color:var(--amber);color:var(--amber);}
+  .btn:disabled{opacity:0.45;cursor:not-allowed;filter:none;}
+  .note{font-size:12px;color:var(--text-dim);line-height:1.6;margin-top:10px;}
+  .note.warn{color:var(--amber);}
+
+  .hidden{display:none !important;}
+
+  /* ---------- workspace ---------- */
+  .workspace{max-width:1180px;margin:0 auto;padding:20px 24px 80px;}
+  .stage{display:grid;grid-template-columns:1fr 220px;gap:18px;align-items:start;}
+  @media (max-width:760px){.stage{grid-template-columns:1fr;}}
+
+  .preview-main{
+    background:#000;border-radius:10px;overflow:hidden;position:relative;
+    border:1px solid var(--border);
+  }
+  .preview-main video{width:100%;display:block;max-height:520px;background:#000;}
+  .preview-topbar{
+    position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;
+    padding:10px 12px;background:linear-gradient(180deg, rgba(0,0,0,0.6), transparent);
+    font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#e8dfca;pointer-events:none;
+  }
+  .caption-overlay{
+    position:absolute;left:50%;bottom:14%;transform:translateX(-50%);
+    background:rgba(15,12,8,0.82);color:#fff;padding:6px 14px;border-radius:5px;
+    font-size:14px;font-weight:600;max-width:82%;text-align:center;
+    border-left:3px solid var(--amber);
+  }
+
+  .vertical-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;}
+  .phone-frame{
+    width:150px;aspect-ratio:9/16;background:#000;border-radius:16px;
+    border:3px solid var(--border);overflow:hidden;position:relative;
+  }
+  .phone-frame video{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    height:100%;width:auto;min-width:100%;object-fit:cover;
+  }
+  .vertical-label{font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;text-align:center;}
+
+  .controls-row{
+    margin-top:20px;background:var(--bg-panel);border:1px solid var(--border);
+    border-radius:10px;padding:18px;
+  }
+  .controls-row .row-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .controls-row .row-head h3{font-size:13px;margin:0;font-family:'JetBrains Mono',monospace;color:var(--text-dim);font-weight:600;letter-spacing:0.5px;}
+  textarea{min-height:90px;resize:vertical;font-family:'Inter',sans-serif;}
+  .controls-actions{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:12px;flex-wrap:wrap;}
+
+  .error-box{
+    background:rgba(200,70,50,0.1);border:1px solid #7a3226;color:#e8b3a4;
+    border-radius:var(--radius);padding:10px 14px;font-size:13px;margin-top:12px;
+  }
+  .loading-row{display:flex;align-items:center;gap:10px;color:var(--amber);font-size:13px;margin-top:12px;font-family:'JetBrains Mono',monospace;}
+  .spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--amber-dim);border-top-color:var(--amber);animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ---------- filmstrip ---------- */
+  .filmstrip-wrap{margin-top:26px;}
+  .filmstrip-wrap h3{font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--text-dim);letter-spacing:0.5px;margin-bottom:10px;}
+  .filmstrip{
+    position:relative;height:64px;background:var(--bg-panel);border:1px solid var(--border);
+    border-radius:8px;display:flex;align-items:flex-end;padding:0 6px;gap:2px;overflow:hidden;
+  }
+  .filmstrip::before, .filmstrip::after{
+    content:"";position:absolute;top:0;bottom:0;width:16px;
+    background-image: radial-gradient(circle, var(--bg) 3px, transparent 3.5px);
+    background-size:100% 12px; background-repeat:repeat-y; background-position:center 4px;
+    z-index:2;
+  }
+  .filmstrip::before{left:0;} .filmstrip::after{right:0;}
+  .wavebar{width:3px;background:var(--border);border-radius:2px 2px 0 0;transition:background .15s ease;}
+  .clip-marker{
+    position:absolute;bottom:0;top:0;background:rgba(232,150,58,0.28);
+    border-left:2px solid var(--amber);border-right:2px solid var(--amber);
+    cursor:pointer;z-index:3;transition:background .15s ease;
+  }
+  .clip-marker:hover{background:rgba(232,150,58,0.45);}
+  .clip-marker .marker-label{
+    position:absolute;top:-2px;left:2px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--amber);
+  }
+  .filmstrip-times{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-dim);margin-top:4px;}
+
+  /* ---------- clip cards ---------- */
+  .clips-list{margin-top:26px;display:flex;flex-direction:column;gap:12px;}
+  .clips-list h3{font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--text-dim);letter-spacing:0.5px;margin-bottom:2px;}
+  .clip-card{
+    background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;
+    padding:16px 18px;display:grid;grid-template-columns:56px 1fr auto;gap:16px;align-items:center;
+    transition:border-color .15s ease;
+  }
+  .clip-card:hover{border-color:var(--amber-dim);}
+  .clip-score{
+    font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--amber);text-align:center;
+    border-right:1px solid var(--border);padding-right:14px;line-height:1;
+  }
+  .clip-score span{display:block;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-dim);margin-top:3px;letter-spacing:0.5px;}
+  .clip-info .clip-time{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--teal);margin-bottom:4px;}
+  .clip-info h4{margin:0 0 4px;font-size:15px;}
+  .clip-info p{margin:0;font-size:13px;color:var(--text-dim);line-height:1.5;}
+  .clip-info .reason{font-size:11.5px;color:#6f6350;margin-top:6px;font-style:italic;}
+  .clip-actions{display:flex;flex-direction:column;gap:6px;}
+  .clip-actions .btn{font-size:12px;padding:7px 14px;}
+
+  .empty-state{
+    text-align:center;padding:40px 20px;color:var(--text-dim);font-size:13.5px;
+    border:1px dashed var(--border);border-radius:10px;
+  }
+
+  footer{max-width:1180px;margin:0 auto;padding:0 24px 40px;color:var(--text-dim);font-size:11.5px;text-align:center;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <h1>KLIP<span>IN</span></h1>
+    <div class="tag">AI clip studio</div>
+  </div>
+  <div class="badge-proto">● PROTOTYPE — jalan beneran, bukan mockup</div>
+</div>
+
+<section class="hero" id="hero">
+  <h2>Ubah video panjang jadi <em>klip</em> yang layak nonton.</h2>
+  <p class="sub">Pilih video dari galeri, kasih transkrip (opsional), biar AI cari momen terbaik — lalu preview & potong langsung di sini. Video kamu diproses lokal di perangkat, nggak diunggah ke server manapun.</p>
+
+  <label class="dropzone" id="dropzone">
+    <div class="reel"></div>
+    <div class="label">Pilih Video dari Galeri</div>
+    <div class="hint">MP4, MOV — diproses langsung dari perangkat kamu</div>
+    <input type="file" id="fileInput" accept="video/*">
+  </label>
+</section>
+
+<section class="workspace hidden" id="workspace">
+  <div class="stage" id="stageWithVideo">
+    <div class="preview-main">
+      <div class="preview-topbar">
+        <span id="timeReadout">00:00 / 00:00</span>
+        <span id="modeReadout">SUMBER: FILE LOKAL</span>
+      </div>
+      <video id="mainVideo" controls></video>
+      <div class="caption-overlay hidden" id="captionOverlay"></div>
+    </div>
+    <div class="vertical-wrap" id="verticalWrap">
+      <div class="phone-frame"><video id="verticalVideo" muted></video></div>
+      <div class="vertical-label">PREVIEW 9:16</div>
+      <button class="btn ghost" id="toggleVerticalBtn" style="font-size:11px;padding:6px 10px;">Sinkronkan preview</button>
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <div class="row-head">
+      <h3>TRANSKRIP / DESKRIPSI VIDEO (OPSIONAL)</h3>
+      <span class="mono" style="font-size:11px;color:var(--text-dim);" id="charCount">0 karakter</span>
+    </div>
+    <textarea id="transcriptArea" placeholder="Tempel transkrip video di sini (idealnya dengan timestamp, cth: [02:15] ...). Kalau kosong, AI cuma bisa nebak pola umum berdasarkan durasi — hasil kurang presisi."></textarea>
+    <div class="controls-actions">
+      <span class="note" id="transcriptHint">Tanpa transkrip = deteksi highlight cuma estimasi umum, bukan berdasarkan isi video.</span>
+      <button class="btn" id="analyzeBtn">✦ Analisis dengan AI</button>
+    </div>
+    <div class="loading-row hidden" id="loadingRow"><div class="spinner"></div> Menganalisis konten & mencari momen terbaik...</div>
+    <div class="error-box hidden" id="errorBox"></div>
+  </div>
+
+  <div class="filmstrip-wrap">
+    <h3>TIMELINE</h3>
+    <div class="filmstrip" id="filmstrip"></div>
+    <div class="filmstrip-times"><span id="ftStart">00:00:00:00</span><span id="ftEnd">00:00:00:00</span></div>
+  </div>
+
+  <div class="clips-list" id="clipsList">
+    <h3>KLIP YANG DISARANKAN</h3>
+    <div class="empty-state" id="clipsEmpty">Belum ada hasil analisis. Klik "Analisis dengan AI" di atas.</div>
+  </div>
+</section>
+
+<footer>Klipin · prototype dibuat via Claude · analisis highlight pakai Claude API secara langsung dari browser kamu · export file .mp4 asli belum tersedia di prototype ini (butuh backend)</footer>
+
+<script>
+(function(){
+  const $ = (id) => document.getElementById(id);
+  const heroEl = $('hero'), workspaceEl = $('workspace');
+  const dropzone = $('dropzone'), fileInput = $('fileInput');
+  const mainVideo = $('mainVideo'), verticalVideo = $('verticalVideo');
+  const timeReadout = $('timeReadout'), modeReadout = $('modeReadout');
+  const captionOverlay = $('captionOverlay');
+  const stageWithVideo = $('stageWithVideo');
+  const transcriptArea = $('transcriptArea'), charCount = $('charCount'), transcriptHint = $('transcriptHint');
+  const analyzeBtn = $('analyzeBtn'), loadingRow = $('loadingRow'), errorBox = $('errorBox');
+  const filmstripEl = $('filmstrip'), ftStart = $('ftStart'), ftEnd = $('ftEnd');
+  const clipsListEl = $('clipsList'), clipsEmpty = $('clipsEmpty');
+  const toggleVerticalBtn = $('toggleVerticalBtn');
+
+  let duration = 0;
+  let clips = [];
+  let clipStopHandler = null;
+
+  // ---------- upload (label native membuka galeri, tanpa JS click ganda) ----------
+  fileInput.addEventListener('change', e => { if(e.target.files[0]) handleFile(e.target.files[0]); });
+  ['dragover','dragenter'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove('drag'); }));
+  dropzone.addEventListener('drop', e => { if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+
+  function handleFile(file){
+    transcriptHint.textContent = 'Tanpa transkrip = deteksi highlight cuma estimasi umum, bukan berdasarkan isi video.';
+    const url = URL.createObjectURL(file);
+    mainVideo.src = url;
+    verticalVideo.src = url;
+    mainVideo.onloadedmetadata = () => {
+      duration = mainVideo.duration;
+      modeReadout.textContent = 'SUMBER: ' + file.name.toUpperCase();
+      enterWorkspace();
+      buildFilmstripBase();
+      updateTimeReadout();
+    };
+  }
+
+  function enterWorkspace(){
+    heroEl.classList.add('hidden');
+    workspaceEl.classList.remove('hidden');
+    stageWithVideo.classList.remove('hidden');
+  }
+
+  // ---------- time readout ----------
+  function fmt(sec){
+    sec = Math.max(0, sec||0);
+    const m = Math.floor(sec/60), s = Math.floor(sec%60);
+    return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }
+  function fmtTC(sec){
+    sec = Math.max(0, sec||0);
+    const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = Math.floor(sec%60), f = Math.floor((sec%1)*24);
+    return [h,m,s,f].map(v=>String(v).padStart(2,'0')).join(':');
+  }
+  function updateTimeReadout(){
+    timeReadout.textContent = fmt(mainVideo.currentTime) + ' / ' + fmt(duration);
+  }
+  mainVideo.addEventListener('timeupdate', updateTimeReadout);
+
+  // ---------- transcript char count ----------
+  transcriptArea.addEventListener('input', () => {
+    charCount.textContent = transcriptArea.value.length + ' karakter';
+  });
+
+  // ---------- vertical sync ----------
+  toggleVerticalBtn.addEventListener('click', () => {
+    verticalVideo.currentTime = mainVideo.currentTime;
+    if(!mainVideo.paused){ verticalVideo.play(); } else { verticalVideo.pause(); }
+  });
+  mainVideo.addEventListener('play', () => { verticalVideo.currentTime = mainVideo.currentTime; verticalVideo.play(); });
+  mainVideo.addEventListener('pause', () => verticalVideo.pause());
+
+  // ---------- filmstrip ----------
+  function buildFilmstripBase(){
+    filmstripEl.innerHTML = '';
+    ftStart.textContent = fmtTC(0);
+    ftEnd.textContent = fmtTC(duration);
+    const barCount = 90;
+    for(let i=0;i<barCount;i++){
+      const bar = document.createElement('div');
+      bar.className = 'wavebar';
+      const h = 8 + Math.abs(Math.sin(i*0.7) * 22) + Math.abs(Math.cos(i*0.31)*14);
+      bar.style.height = Math.min(48, h) + 'px';
+      filmstripEl.appendChild(bar);
+    }
+  }
+  function renderFilmstripMarkers(){
+    filmstripEl.querySelectorAll('.clip-marker').forEach(m => m.remove());
+    clips.forEach((c, i) => {
+      const left = (c.start_seconds / duration) * 100;
+      const width = ((c.end_seconds - c.start_seconds) / duration) * 100;
+      const marker = document.createElement('div');
+      marker.className = 'clip-marker';
+      marker.style.left = left + '%';
+      marker.style.width = Math.max(width, 0.6) + '%';
+      marker.innerHTML = '<span class="marker-label">' + (i+1) + '</span>';
+      marker.title = c.title;
+      marker.addEventListener('click', () => previewClip(c));
+      filmstripEl.appendChild(marker);
+    });
+  }
+
+  // ---------- clip preview ----------
+  function previewClip(clip){
+    captionOverlay.textContent = clip.caption || clip.hook || '';
+    captionOverlay.classList.remove('hidden');
+
+    if(clipStopHandler) mainVideo.removeEventListener('timeupdate', clipStopHandler);
+    mainVideo.currentTime = clip.start_seconds;
+    verticalVideo.currentTime = clip.start_seconds;
+    mainVideo.play();
+    clipStopHandler = function(){
+      if(mainVideo.currentTime >= clip.end_seconds){
+        mainVideo.pause();
+        captionOverlay.classList.add('hidden');
+        mainVideo.removeEventListener('timeupdate', clipStopHandler);
+        clipStopHandler = null;
+      }
+    };
+    mainVideo.addEventListener('timeupdate', clipStopHandler);
+  }
+
+  // ---------- render clip cards ----------
+  function renderClips(){
+    clipsListEl.querySelectorAll('.clip-card').forEach(c => c.remove());
+    if(clips.length === 0){ clipsEmpty.classList.remove('hidden'); return; }
+    clipsEmpty.classList.add('hidden');
+    clips.forEach((c, i) => {
+      const card = document.createElement('div');
+      card.className = 'clip-card';
+      card.innerHTML =
+        '<div class="clip-score">' + Math.round(c.score) + '<span>SKOR</span></div>' +
+        '<div class="clip-info">' +
+          '<div class="clip-time">#' + (i+1) + ' · ' + fmtTC(c.start_seconds) + ' → ' + fmtTC(c.end_seconds) + ' · ' + Math.round(c.end_seconds - c.start_seconds) + 's</div>' +
+          '<h4>' + escapeHtml(c.title) + '</h4>' +
+          '<p>' + escapeHtml(c.caption || c.hook || '') + '</p>' +
+          '<div class="reason">' + escapeHtml(c.reason || '') + '</div>' +
+        '</div>' +
+        '<div class="clip-actions"></div>';
+      const actions = card.querySelector('.clip-actions');
+      {
+        const previewBtn = document.createElement('button');
+        previewBtn.className = 'btn'; previewBtn.textContent = '▶ Preview';
+        previewBtn.addEventListener('click', () => previewClip(c));
+        actions.appendChild(previewBtn);
+      }
+      const exportBtn = document.createElement('button');
+      exportBtn.className = 'btn ghost'; exportBtn.textContent = 'Export .mp4';
+      exportBtn.title = 'Export file asli butuh backend (ffmpeg) — belum ada di prototype ini';
+      exportBtn.disabled = true;
+      actions.appendChild(exportBtn);
+      clipsListEl.appendChild(card);
+    });
+  }
+  function escapeHtml(s){
+    const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML;
+  }
+
+  // ---------- AI analysis ----------
+  analyzeBtn.addEventListener('click', analyze);
+
+  async function analyze(){
+    errorBox.classList.add('hidden');
+    loadingRow.classList.remove('hidden');
+    analyzeBtn.disabled = true;
+
+    const transcript = transcriptArea.value.trim();
+    const durationSec = Math.round(duration);
+
+    const promptParts = [];
+    promptParts.push('Kamu adalah asisten AI untuk tool pemotong video clip (seperti Opus Clip). Tugasmu: sarankan 4-6 segmen klip terbaik dari sebuah video berdurasi ' + durationSec + ' detik.');
+    if(transcript){
+      promptParts.push('Berikut transkrip/deskripsi video (mungkin ada timestamp di dalamnya):\n"""\n' + transcript.slice(0, 6000) + '\n"""');
+      promptParts.push('Gunakan isi transkrip ini untuk menentukan momen paling menarik/berpotensi viral secara spesifik, bukan tebakan umum.');
+    } else {
+      promptParts.push('Tidak ada transkrip yang diberikan, jadi buat saran umum yang masuk akal berdasarkan struktur video pada umumnya (hook di awal, klimaks di tengah, penutup kuat), dan turunkan nilai skor karena ini cuma estimasi, dan sebutkan di field "reason" bahwa ini estimasi umum tanpa transkrip.');
+    }
+    promptParts.push('Aturan output SANGAT PENTING: balas HANYA dengan JSON valid, tanpa teks lain, tanpa markdown code fence, dengan struktur persis seperti ini:\n{"clips":[{"title":"judul singkat menarik","start_seconds":number,"end_seconds":number,"hook":"kalimat pembuka klip yang menggugah","caption":"caption pendek untuk overlay/sosmed","score":number (1-100, potensi engagement),"reason":"alasan singkat kenapa momen ini dipilih"}]}');
+    promptParts.push('Pastikan start_seconds dan end_seconds berada dalam rentang 0 sampai ' + durationSec + ', durasi tiap klip antara 15 dan 90 detik, dan urutkan berdasarkan skor tertinggi.');
+
+    const prompt = promptParts.join('\n\n');
+
+    try{
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: prompt })
+      });
+      if(!response.ok){
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'request_failed');
+      }
+      const data = await response.json();
+      const text = (data.content || []).map(b => b.text || '').join('\n');
+      const clean = text.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+      let rawClips = Array.isArray(parsed.clips) ? parsed.clips : [];
+
+      clips = rawClips.map(c => {
+        let s = Math.max(0, Math.min(durationSec, Number(c.start_seconds) || 0));
+        let e = Math.max(0, Math.min(durationSec, Number(c.end_seconds) || 0));
+        if(e <= s) e = Math.min(durationSec, s + 20);
+        return {
+          title: c.title || 'Klip tanpa judul',
+          start_seconds: s,
+          end_seconds: e,
+          hook: c.hook || '',
+          caption: c.caption || '',
+          score: Math.max(1, Math.min(100, Number(c.score) || 50)),
+          reason: c.reason || ''
+        };
+      }).sort((a,b) => b.score - a.score);
+
+      if(clips.length === 0) throw new Error('empty');
+
+      renderClips();
+      renderFilmstripMarkers();
+    } catch(err){
+      errorBox.textContent = 'Analisis gagal diproses. Coba lagi sebentar lagi — kalau transkrip sangat panjang, coba potong jadi lebih ringkas.';
+      errorBox.classList.remove('hidden');
+    } finally {
+      loadingRow.classList.add('hidden');
+      analyzeBtn.disabled = false;
+    }
+  }
+})();
+</script>
+</body>
+</html>
