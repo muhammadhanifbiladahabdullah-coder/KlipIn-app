@@ -34,12 +34,14 @@ export default async function handler(req, res) {
     const data = await anthropicRes.json();
 
     if (!anthropicRes.ok) {
-      res.status(anthropicRes.status).json({ error: data.error?.message || 'anthropic_api_error' });
+      console.error('ANTHROPIC_ERROR', anthropicRes.status, JSON.stringify(data));
+      res.status(anthropicRes.status).json({ error: data.error?.message || 'anthropic_api_error', detail: data });
       return;
     }
 
     res.status(200).json(data);
   } catch (err) {
+    console.error('SERVER_ERROR', err.message);
     res.status(500).json({ error: 'server_error: ' + err.message });
   }
-      }
+}
