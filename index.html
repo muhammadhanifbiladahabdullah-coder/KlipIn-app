@@ -498,7 +498,7 @@
       renderClips();
       renderFilmstripMarkers();
     } catch(err){
-      errorBox.textContent = 'Analisis gagal diproses. Coba lagi sebentar lagi — kalau transkrip sangat panjang, coba potong jadi lebih ringkas.';
+      errorBox.textContent = 'Analisis gagal diproses. Detail: ' + (err.message || 'unknown_error') + ' — kalau transkrip sangat panjang, coba potong jadi lebih ringkas.';
       errorBox.classList.remove('hidden');
     } finally {
       loadingRow.classList.add('hidden');
